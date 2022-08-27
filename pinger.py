@@ -1,3 +1,5 @@
+import os
+import sys
 
 
 # Pinger script as of 2022-08-27
@@ -20,9 +22,13 @@ def start():
 def get_server_list(report):
     print("read server list")
 
-    with open('server_watchlist.txt') as f:
-        content = f.read().splitlines()
-    return content
+    if os.path.isfile('server_watchlist.txt'):
+        with open('server_watchlist.txt') as f:
+            content = f.read().splitlines()
+        return content
+    else:
+        print("ERROR: missing file 'server_watchlist.txt' in root directory. Please create the file")
+        sys.exit()
 
 
 def create_report(data):
