@@ -1,10 +1,10 @@
 PINGER
 
 
-IDEA
+IDEA\n
 Monitor uptime for servers. Store result in database
 
-FUNCTIONS
+FUNCTIONS\n
 Ping clients
 log response (eg. 404, 200)
 save results in local DB and remote DB
