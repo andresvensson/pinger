@@ -6,9 +6,12 @@
 
 
 def start():
-    report = dict
-    print("get servers list")
-    get_server_list(report)
+    report = {}
+    # get servers list from separate text file
+    report['server_list'] = get_server_list(report)
+
+    print(report)
+
     print("ping servers")
     print("save to local db")
     print("save to remote db")
@@ -16,6 +19,10 @@ def start():
 
 def get_server_list(report):
     print("read server list")
+
+    with open('server_watchlist.txt') as f:
+        content = f.read().splitlines()
+    return content
 
 
 def create_report(data):
