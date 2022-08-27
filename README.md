@@ -2,7 +2,7 @@ PINGER
 
 
 IDEA
-Modern pinger, LAN and remote network? Both networks?.
+Monitor uptime for servers. Store result in database
 
 FUNCTIONS
 Ping clients
