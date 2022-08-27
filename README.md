@@ -2,7 +2,7 @@ PINGER
 
 
 IDEA
-Modern pinger, first hand for yyl.se network? Both networks?.
+Modern pinger, LAN and remote network? Both networks?.
 
 FUNCTIONS
 Ping clients
