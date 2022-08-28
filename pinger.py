@@ -7,7 +7,7 @@ import subprocess
 # Pinger script as of 2022-08-27
 #
 # Notes
-# db structure: One database, one row for every server
+# db structure: One database, one table, one row for every server
 # How to determinate missing values in remote db?
 
 
@@ -32,6 +32,7 @@ def get_server_list():
         return content
     else:
         print("ERROR: missing file 'server_watchlist.txt' in root directory. Please create the file")
+        # add a helper? Maybe later
         sys.exit()
 
 
