@@ -1,5 +1,7 @@
 import os
 import sys
+import platform
+import subprocess
 
 
 # Pinger script as of 2022-08-27
@@ -15,8 +17,11 @@ def start():
     print(report)
 
     print("ping servers")
+    report['server_status'] = get_server_status(report)
+
     print("save to local db")
     print("save to remote db")
+    print(report)
 
 
 def get_server_list(report):
@@ -31,21 +36,43 @@ def get_server_list(report):
         sys.exit()
 
 
-def create_report(data):
-    report = "Server Report\n"
-    data['report'] = report
-    for p in data['logfile']:
-        # print(p + ":", data['logfile'][p])
-        with open(data['logfile'][p]) as f:
-            content = f.readlines()
-            print("CONTENT:", content)
-            txt = p + "\n" + str(content)
-            data['report'] += txt
-
-    return data
+def get_server_status1(report):
+    print("STATUS")
+    for s in report['server_list']:
+        report['server_status'] = {str(s): ping(s)}
+        if ping(s) == 0:
+            report['server_status'] = {str(s): True}
+        else:
+            report['server_status'] = {str(s): False}
+    return report
 
 
+def get_server_status(report):
+    print("STATUS")
+    report['server_status'] = {}
+    for s in report['server_list']:
+        if ping(s) == 0:
+            # host online
+            report['server_status'] = {str(s): True}
+        else:
+            # host offline
+            report['server_status'] = {str(s): False}
+    return report
 
+
+def ping(host):
+    """
+        Returns True if host (str) responds to a ping request.
+        Remember that a host may not respond to a ping (ICMP) request even if the host name is valid.
+        """
+
+    # Option for the number of packets as a function of
+    param = '-n' if platform.system().lower() == 'windows' else '-c'
+
+    # Building the command. Ex: "ping -c 1 google.com"
+    command = ['ping', param, '1', host]
+
+    return subprocess.call(command) == 0
 
 
 
