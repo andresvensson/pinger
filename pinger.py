@@ -6,7 +6,9 @@ import subprocess
 
 # Pinger script as of 2022-08-27
 #
+# Notes
 # db structure: One database, one row for every server
+# How to determinate missing values in remote db?
 
 
 def start():
@@ -16,7 +18,7 @@ def start():
     # ping servers
     report['server_online'] = get_server_status(report)
 
-    print("\nsave to local db")
+    print("\nsave to local db")  # sqlite3?
     print("save to remote db")
     print("\nPrint result:\n", report)
 
@@ -60,10 +62,6 @@ def ping(host):
     # command = ['ping', param, '1', host, '2>&1 > /dev/null']
 
     return subprocess.call(command) == 0
-
-
-
-
 
 
 if __name__ == "__main__":
