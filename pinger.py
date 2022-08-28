@@ -10,21 +10,18 @@ import subprocess
 
 
 def start():
-    report = {}
-    # get servers list from separate text file
-    report['server_list'] = get_server_list(report)
+    # read servers list from separate text file
+    report = {'server_list': get_server_list()}
 
-    print(report)
+    # ping servers
+    report['server_online'] = get_server_status(report)
 
-    print("ping servers")
-    report['server_status'] = get_server_status(report)
-
-    print("save to local db")
+    print("\nsave to local db")
     print("save to remote db")
-    print(report)
+    print("\nPrint result:\n", report)
 
 
-def get_server_list(report):
+def get_server_list():
     print("read server list")
 
     if os.path.isfile('server_watchlist.txt'):
@@ -36,28 +33,17 @@ def get_server_list(report):
         sys.exit()
 
 
-def get_server_status1(report):
-    print("STATUS")
-    for s in report['server_list']:
-        report['server_status'] = {str(s): ping(s)}
-        if ping(s) == 0:
-            report['server_status'] = {str(s): True}
-        else:
-            report['server_status'] = {str(s): False}
-    return report
-
-
 def get_server_status(report):
     print("STATUS")
-    report['server_status'] = {}
+    status = {}
     for s in report['server_list']:
         if ping(s) == 0:
-            # host online
-            report['server_status'] = {str(s): True}
-        else:
             # host offline
-            report['server_status'] = {str(s): False}
-    return report
+            status[str(s)] = False
+        else:
+            # host online
+            status[str(s)] = True
+    return status
 
 
 def ping(host):
@@ -71,6 +57,7 @@ def ping(host):
 
     # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
+    # command = ['ping', param, '1', host, '2>&1 > /dev/null']
 
     return subprocess.call(command) == 0
 
