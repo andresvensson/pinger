@@ -1,3 +1,3 @@
 username = "xy"
 password = "abcd"
-domain = "example.com"
+domain = "example1.com"
