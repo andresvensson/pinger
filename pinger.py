@@ -2,13 +2,13 @@ import os
 import sys
 import platform
 import subprocess
-
+import config
 
 # Pinger script as of 2022-08-27
 #
 # Notes
 # db structure: One database, one table, one row for every server
-# How to determinate missing values in remote db?
+# 
 
 
 def start():
