@@ -2,4 +2,8 @@
 .idea/
 # files
 server_watchlist.txt
+<<<<<<< HEAD
 config.py
+=======
+config.py
+>>>>>>> main
