@@ -78,6 +78,11 @@ def ping(host):
 
 
 def save_values(report):
+    # local sqlite3 save
+    #save_local(report)
+
+
+def save_local(report):
     print("SAVE??")
     c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, host TEXT, online INTEGER)""")
     conn_sqlite.commit()
