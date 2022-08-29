@@ -3,6 +3,8 @@ import sys
 import platform
 import subprocess
 import config
+import _sqlite3
+
 
 # Pinger script as of 2022-08-27
 #
