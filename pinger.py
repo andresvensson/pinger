@@ -1,9 +1,11 @@
 import os
+import sqlite3
 import sys
 import platform
 import subprocess
 import config
 import _sqlite3
+import pymysql
 
 
 # Pinger script as of 2022-08-27
@@ -11,6 +13,12 @@ import _sqlite3
 # Notes
 # db structure: One database, one table, one row for every server
 #
+
+# CONFIG
+save_to_database = False
+
+conn_sqlite = sqlite3.connect('database.db')
+c3 = conn_sqlite.cursor()
 
 
 def start():
@@ -20,9 +28,11 @@ def start():
     # ping servers
     report['server_online'] = get_server_status(report)
 
-    print("\nsave to local db")  # sqlite3?
-    print("save to remote db")
-    print("\nPrint result:\n", report)
+    # save to local database and push to remote database
+    if save_to_database:
+        save_values(report)
+    else:
+        print("\nPrint result:\n", report)
 
 
 def get_server_list():
@@ -65,6 +75,18 @@ def ping(host):
     # command = ['ping', param, '1', host, '2>&1 > /dev/null']
 
     return subprocess.call(command) == 0
+
+
+def save_values(report):
+    print("SAVE??")
+    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, host TEXT, online INTEGER)""")
+    conn_sqlite.commit()
+
+    for s in report['server_online']:
+        print("insert all values")
+
+    sql_statement = "INSERT INTO status VALUES (", report[]
+    c3.execute("INSERT INTO status VALUES ()")
 
 
 if __name__ == "__main__":
