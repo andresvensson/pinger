@@ -8,7 +8,7 @@ import config
 #
 # Notes
 # db structure: One database, one table, one row for every server
-# 
+#
 
 
 def start():
