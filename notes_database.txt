@@ -6,18 +6,19 @@ push local
 push remote	-fail
 	save in a local missing table
 
-
+??
+Does it matter from where pinger goes when saving to remote database?
 
 THIS!
 idéa:
 1 save local
 2 check remote connectivity (done earlier in code)
-	offline = save in local db (missing_values)
+	*offline = save in local db (missing_values)
 	online = check missing values?
 		clear = save to remote - end
 		missing = save missing + recent
 			if dbs in sync
-				delete missing flaged (local)
+				delete missing flagged (local)
 3 fail events? write logfile local
 
 

@@ -18,9 +18,6 @@ from datetime import datetime
 # CONFIG
 save_to_database = True
 
-conn_sqlite = sqlite3.connect('database.db')
-c3 = conn_sqlite.cursor()
-
 
 def start():
     # read servers list from separate text file, timestamp
@@ -33,7 +30,9 @@ def start():
     if save_to_database:
         save_values(report)
     else:
-        print("\nPrint result:\n", report)
+        # print dict
+        print("\n\nREPORT DICT:\n", report)
+        print("\n\nEnd")
 
 
 def get_server_list():
@@ -81,7 +80,16 @@ def ping(host):
 def save_values(report):
     # local sqlite3 save
     save_local(report)
-    print("End")
+    print("Local save ok\nREPORT DICT:\n", report)
+
+    # do we have connectivity to remote host?
+    if report['server_online'][config.domain]:
+        # yes. Do we also have missing values?
+        print("REMOTE HOST ONLINE!")
+        # save_remote(report)   # also here, receive receipt to ensure saved values
+    else:
+        print("remote host offline")
+
 
 
 def save_local(report):
@@ -92,19 +100,18 @@ def save_local(report):
     .tables
     select * from status;
     """
+    conn_sqlite = sqlite3.connect('database.db')
+    c3 = conn_sqlite.cursor()
     c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, timestamp CURRENT_TIMESTAMP,
      host TEXT, online INTEGER);""")
     conn_sqlite.commit()
 
     for s in report['server_online']:
         values = (report['timestamp'], s, report['server_online'][s])
-        # id ? NULL, timestamp = insert date??, host = code, online = code
         c3.execute("INSERT INTO status VALUES (NULL, ?, ?, ?);", values)
-        conn_sqlite.commit()
 
-    # conn_sqlite.commit()
+    conn_sqlite.commit()
     conn_sqlite.close()
-    print("END OF CODE")
 
 
 if __name__ == "__main__":
