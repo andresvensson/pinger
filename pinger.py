@@ -15,7 +15,7 @@ import pymysql
 #
 
 # CONFIG
-save_to_database = False
+save_to_database = True
 
 conn_sqlite = sqlite3.connect('database.db')
 c3 = conn_sqlite.cursor()
@@ -54,10 +54,10 @@ def get_server_status(report):
     for s in report['server_list']:
         if ping(s) == 0:
             # host offline
-            status[str(s)] = False
+            status[str(s)] = 0
         else:
             # host online
-            status[str(s)] = True
+            status[str(s)] = 1
     return status
 
 
@@ -79,19 +79,31 @@ def ping(host):
 
 def save_values(report):
     # local sqlite3 save
-    #save_local(report)
+    save_local(report)
+    print("End")
 
 
 def save_local(report):
-    print("SAVE??")
-    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, host TEXT, online INTEGER)""")
+    """
+    can browse this in shell. Useful commands:
+    sqlite3
+    .open database.db
+    .tables
+    select * from status;
+    """
+    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, timestamp CURRENT_TIMESTAMP,
+     host TEXT, online INTEGER);""")
     conn_sqlite.commit()
 
     for s in report['server_online']:
-        print("insert all values")
+        values = (s, report['server_online'][s])
+        # id ? NULL, timestamp = insert date??, host = code, online = code
+        c3.execute("INSERT INTO status VALUES (NULL, NULL, ?, ?);", values)
+        conn_sqlite.commit()
 
-    sql_statement = "INSERT INTO status VALUES (", report[]
-    c3.execute("INSERT INTO status VALUES ()")
+    # conn_sqlite.commit()
+    conn_sqlite.close()
+    print("END OF CODE")
 
 
 if __name__ == "__main__":
