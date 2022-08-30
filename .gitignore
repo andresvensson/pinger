@@ -1,5 +1,7 @@
 # folders
 .idea/
+__pycache__/
 # files
 server_watchlist.txt
 config.py
+database.db

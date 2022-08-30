@@ -1,9 +1,11 @@
 import os
+import sqlite3
 import sys
 import platform
 import subprocess
 import config
 import _sqlite3
+import pymysql
 
 
 # Pinger script as of 2022-08-27
@@ -11,6 +13,12 @@ import _sqlite3
 # Notes
 # db structure: One database, one table, one row for every server
 #
+
+# CONFIG
+save_to_database = True
+
+conn_sqlite = sqlite3.connect('database.db')
+c3 = conn_sqlite.cursor()
 
 
 def start():
@@ -20,9 +28,11 @@ def start():
     # ping servers
     report['server_online'] = get_server_status(report)
 
-    print("\nsave to local db")  # sqlite3?
-    print("save to remote db")
-    print("\nPrint result:\n", report)
+    # save to local database and push to remote database
+    if save_to_database:
+        save_values(report)
+    else:
+        print("\nPrint result:\n", report)
 
 
 def get_server_list():
@@ -44,10 +54,10 @@ def get_server_status(report):
     for s in report['server_list']:
         if ping(s) == 0:
             # host offline
-            status[str(s)] = False
+            status[str(s)] = 0
         else:
             # host online
-            status[str(s)] = True
+            status[str(s)] = 1
     return status
 
 
@@ -65,6 +75,35 @@ def ping(host):
     # command = ['ping', param, '1', host, '2>&1 > /dev/null']
 
     return subprocess.call(command) == 0
+
+
+def save_values(report):
+    # local sqlite3 save
+    save_local(report)
+    print("End")
+
+
+def save_local(report):
+    """
+    can browse this in shell. Useful commands:
+    sqlite3
+    .open database.db
+    .tables
+    select * from status;
+    """
+    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, timestamp CURRENT_TIMESTAMP,
+     host TEXT, online INTEGER);""")
+    conn_sqlite.commit()
+
+    for s in report['server_online']:
+        values = (s, report['server_online'][s])
+        # id ? NULL, timestamp = insert date??, host = code, online = code
+        c3.execute("INSERT INTO status VALUES (NULL, NULL, ?, ?);", values)
+        conn_sqlite.commit()
+
+    # conn_sqlite.commit()
+    conn_sqlite.close()
+    print("END OF CODE")
 
 
 if __name__ == "__main__":
