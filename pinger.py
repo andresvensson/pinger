@@ -6,6 +6,7 @@ import subprocess
 import config
 import _sqlite3
 import pymysql
+from datetime import datetime
 
 
 # Pinger script as of 2022-08-27
@@ -22,8 +23,8 @@ c3 = conn_sqlite.cursor()
 
 
 def start():
-    # read servers list from separate text file
-    report = {'server_list': get_server_list()}
+    # read servers list from separate text file, timestamp
+    report = {'server_list': get_server_list(), 'timestamp': datetime.now()}
 
     # ping servers
     report['server_online'] = get_server_status(report)
@@ -96,9 +97,9 @@ def save_local(report):
     conn_sqlite.commit()
 
     for s in report['server_online']:
-        values = (s, report['server_online'][s])
+        values = (report['timestamp'], s, report['server_online'][s])
         # id ? NULL, timestamp = insert date??, host = code, online = code
-        c3.execute("INSERT INTO status VALUES (NULL, NULL, ?, ?);", values)
+        c3.execute("INSERT INTO status VALUES (NULL, ?, ?, ?);", values)
         conn_sqlite.commit()
 
     # conn_sqlite.commit()

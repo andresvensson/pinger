@@ -7,10 +7,6 @@ push remote	-fail
 	save in a local missing table
 
 
-code structure:
-pinger.py, (import databaser or print)
-databaser.py, (import pwd)
-
 
 THIS!
 idéa:
