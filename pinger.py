@@ -21,7 +21,11 @@ save_to_database = True
 
 def start():
     # read servers list from separate text file, timestamp
-    report = {'server_list': get_server_list(), 'timestamp': datetime.now()}
+    if os.path.isfile('config.py'):
+        report = {'source': config.source, 'server_list': get_server_list(), 'timestamp': datetime.now()}
+    else:
+        print("ERROR: missing file 'config.py' in root directory. Please create the file")
+        sys.exit()
 
     # ping servers
     report['server_online'] = get_server_status(report)
@@ -80,16 +84,18 @@ def ping(host):
 def save_values(report):
     # local sqlite3 save
     save_local(report)
-    print("Local save ok\nREPORT DICT:\n", report)
+    print("\nLocal save ok\n\nREPORT DICT:\n", report)
 
+    # Remote save
     # do we have connectivity to remote host?
     if report['server_online'][config.domain]:
-        # yes. Do we also have missing values?
-        print("REMOTE HOST ONLINE!")
+        # Yes but first add missing values to remote database
+        missing_values = get_missing_values()
+        print("\nRemote save ok")
         # save_remote(report)   # also here, receive receipt to ensure saved values
     else:
         print("remote host offline")
-
+        save_missing_values(report)
 
 
 def save_local(report):
@@ -102,16 +108,45 @@ def save_local(report):
     """
     conn_sqlite = sqlite3.connect('database.db')
     c3 = conn_sqlite.cursor()
-    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, timestamp CURRENT_TIMESTAMP,
-     host TEXT, online INTEGER);""")
+    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, source TEXT, timestamp 
+    CURRENT_TIMESTAMP, online INTEGER, host TEXT);""")
     conn_sqlite.commit()
 
     for s in report['server_online']:
-        values = (report['timestamp'], s, report['server_online'][s])
-        c3.execute("INSERT INTO status VALUES (NULL, ?, ?, ?);", values)
+        values = (report['source'], report['timestamp'], report['server_online'][s], s)
+        c3.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
 
     conn_sqlite.commit()
     conn_sqlite.close()
+
+
+def save_missing_values(report):
+    conn_sqlite = sqlite3.connect('database.db')
+    c3 = conn_sqlite.cursor()
+    c3.execute("""CREATE TABLE IF NOT EXISTS missing_values (id INTEGER NOT NULL PRIMARY KEY, source TEXT, timestamp 
+    CURRENT_TIMESTAMP, online INTEGER, host TEXT);""")
+    conn_sqlite.commit()
+
+    for s in report['server_online']:
+        values = (report['source'], report['timestamp'], report['server_online'][s], s)
+        c3.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
+
+    conn_sqlite.commit()
+    conn_sqlite.close()
+
+
+def get_missing_values():
+    # return object/dict/list
+    # nah.. just do the check and if needed, add up remote database
+    print("get missing values pls")
+    conn_sqlite = sqlite3.connect('database.db')
+    c3 = conn_sqlite.cursor()
+    for row in c3.execute("SELECT * FROM status;"):
+        print(row)
+
+    conn_sqlite.commit()
+
+    return None
 
 
 if __name__ == "__main__":
