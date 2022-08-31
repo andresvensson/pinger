@@ -90,9 +90,9 @@ def save_values(report):
     # do we have connectivity to remote host?
     if report['server_online'][config.domain]:
         # Yes but first add missing values to remote database
-        missing_values = get_missing_values()
+        get_missing_values()
+        save_remote(report)   # also here, receive receipt to ensure saved values
         print("\nRemote save ok")
-        # save_remote(report)   # also here, receive receipt to ensure saved values
     else:
         print("remote host offline")
         save_missing_values(report)
@@ -141,12 +141,43 @@ def get_missing_values():
     print("get missing values pls")
     conn_sqlite = sqlite3.connect('database.db')
     c3 = conn_sqlite.cursor()
-    for row in c3.execute("SELECT * FROM status;"):
-        print(row)
 
-    conn_sqlite.commit()
+    # for row in c3.execute("SELECT * FROM missing_values;"):
+    data = c3.execute("SELECT * FROM status;")
+    conn_sqlite.close()
+    if data:
+        save_remote(data)
+        #for row in data:
+            #print(row)
+            # save_remote(row)  # maybe pass whole tuple (depending on how I write the save_remote)
+            #print("save data to remote database")
+    else:
+        return
 
-    return None
+
+def save_remote(report):    # edit this!
+    db = pymysql.connect(host=config.domain, user="minecraft", password="pulken", db="minecraft_alva")
+    try:
+        columns = []
+        values = []
+        for x in data:
+            columns.append(x)
+            if isinstance(data[x], list) or isinstance(data[x], dict):
+                values.append(str(data[x]))
+            else:
+                values.append(data[x])
+
+        sql_string = 'INSERT INTO ping (' + ', '.join(columns) + ') VALUES (' + (
+                '%s, ' * (len(columns) - 1)) + '%s)'
+
+        cursor = db.cursor()
+        cursor.execute(sql_string, values)
+        db.commit()
+        receipt = cursor.lastrowid
+        db.close()
+    except pymysql.Error as e:
+        db.rollback()
+        print("Error %d: %s" % (e.args[0], e.args[1]))
 
 
 if __name__ == "__main__":
