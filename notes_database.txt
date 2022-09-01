@@ -8,6 +8,7 @@ test code
 code cleanup (remove prints)
 add logger?
 adjust Github readme
+deploy
 done?
 :::::::::
 

@@ -3,6 +3,8 @@ import sqlite3
 import sys
 import platform
 import subprocess
+import time
+
 import config
 import _sqlite3
 import pymysql
@@ -16,10 +18,12 @@ from datetime import datetime
 #
 
 # CONFIG
-save_to_database = False
+save_to_database = True
 
 
 def start():
+    # delay execute to free cpu cycles due to other codes running at same time.
+    #time.sleep(5)
     # read servers list from separate text file, timestamp
     if os.path.isfile('config.py'):
         report = {'source': config.source, 'server_list': get_server_list(), 'timestamp': datetime.now()}
@@ -141,7 +145,7 @@ def get_missing_values():
     conn_sqlite = sqlite3.connect('database.db')
     c3 = conn_sqlite.cursor()
 
-    data = c3.execute("SELECT * FROM missing_values;")
+    data = c3.execute("SELECT * FROM missing_values;")  # ERROR! When table not exists... Do a check before
     conn_sqlite.close()
     if data:
         report = {'source': config.source}
@@ -153,12 +157,16 @@ def get_missing_values():
         report['server_online'] = status
         save_remote(report)
         print("save missing values")
+
+        # clean up missing table
+        c3.execute("DROP TABLE IF EXISTS missing_values;")
+        conn_sqlite.close()
     else:
         return
 
 
 def save_remote(report):    # detect if it's missing values. In that case it's probably a tuple and not a callable dict
-    db = pymysql.connect(host=config.domain, user=config.username, password=config.password, db="minecraft_alva")
+    db = pymysql.connect(host=config.domain, user=config.username, password=config.password, db="ping")
     cursor = db.cursor()
     sql_string = "CREATE TABLE status IF NOT EXISTS(value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp " \
                  "DATETIME, online BOOLEAN, host TEXT, PRIMARY KEY(value_id));"
