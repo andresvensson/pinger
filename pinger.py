@@ -16,7 +16,7 @@ from datetime import datetime
 #
 
 # CONFIG
-save_to_database = True
+save_to_database = False
 
 
 def start():
@@ -82,16 +82,15 @@ def ping(host):
 
 
 def save_values(report):
-    # local sqlite3 save
+    # Local sqlite3 save
     save_local(report)
     print("\nLocal save ok\n\nREPORT DICT:\n", report)
 
-    # Remote save
-    # do we have connectivity to remote host?
+    # Remote sql save (if online)
     if report['server_online'][config.domain]:
-        # Yes but first add missing values to remote database
+        # First add missing values to remote database
         get_missing_values()
-        save_remote(report)   # also here, receive receipt to ensure saved values
+        save_remote(report)
         print("\nRemote save ok")
     else:
         print("remote host offline")
@@ -142,39 +141,36 @@ def get_missing_values():
     conn_sqlite = sqlite3.connect('database.db')
     c3 = conn_sqlite.cursor()
 
-    # for row in c3.execute("SELECT * FROM missing_values;"):
-    data = c3.execute("SELECT * FROM status;")
+    data = c3.execute("SELECT * FROM missing_values;")
     conn_sqlite.close()
     if data:
-        save_remote(data)
-        #for row in data:
-            #print(row)
-            # save_remote(row)  # maybe pass whole tuple (depending on how I write the save_remote)
-            #print("save data to remote database")
+        report = {'source': config.source}
+        status = {}
+        for row in data:
+            report['timestamp'] = row[2]
+            status[str(row[4])] = row[3]
+
+        report['server_online'] = status
+        save_remote(report)
+        print("save missing values")
     else:
         return
 
 
-def save_remote(report):    # edit this!
-    db = pymysql.connect(host=config.domain, user="minecraft", password="pulken", db="minecraft_alva")
+def save_remote(report):    # detect if it's missing values. In that case it's probably a tuple and not a callable dict
+    db = pymysql.connect(host=config.domain, user=config.username, password=config.password, db="minecraft_alva")
+    cursor = db.cursor()
+    sql_string = "CREATE TABLE status IF NOT EXISTS(value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp " \
+                 "DATETIME, online BOOLEAN, host TEXT, PRIMARY KEY(value_id));"
     try:
-        columns = []
-        values = []
-        for x in data:
-            columns.append(x)
-            if isinstance(data[x], list) or isinstance(data[x], dict):
-                values.append(str(data[x]))
-            else:
-                values.append(data[x])
-
-        sql_string = 'INSERT INTO ping (' + ', '.join(columns) + ') VALUES (' + (
-                '%s, ' * (len(columns) - 1)) + '%s)'
-
-        cursor = db.cursor()
-        cursor.execute(sql_string, values)
+        cursor.execute(sql_string)
         db.commit()
-        receipt = cursor.lastrowid
+        for s in report['server_online']:
+            values = (report['source'], report['timestamp'], report['server_online'][s], s)
+            cursor.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
+        db.commit()
         db.close()
+
     except pymysql.Error as e:
         db.rollback()
         print("Error %d: %s" % (e.args[0], e.args[1]))
