@@ -139,14 +139,17 @@ def save_missing_values(report):
 
 
 def get_missing_values():
-    # return object/dict/list
-    # nah.. just do the check and if needed, add up remote database
     print("get missing values pls")
     conn_sqlite = sqlite3.connect('database.db')
     c3 = conn_sqlite.cursor()
+    try:
+        c3.execute("SELECT * FROM missing_values;")
+        data = c3.fetchall()
+        conn_sqlite.commit()
+    except sqlite3.OperationalError:
+        print("No missing values (no database named 'missing_values')")
+        data = None
 
-    data = c3.execute("SELECT * FROM missing_values;")  # ERROR! When table not exists... Do a check before
-    conn_sqlite.close()
     if data:
         report = {'source': config.source}
         status = {}
@@ -165,17 +168,29 @@ def get_missing_values():
         return
 
 
-def save_remote(report):    # detect if it's missing values. In that case it's probably a tuple and not a callable dict
+def save_remote(report):
     db = pymysql.connect(host=config.domain, user=config.username, password=config.password, db="ping")
     cursor = db.cursor()
-    sql_string = "CREATE TABLE status IF NOT EXISTS(value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp " \
+
+    # Check below! Error 1064: You have an error in your SQL syntax
+    sql_string = "CREATE TABLE IF NOT EXISTS status (value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp " \
                  "DATETIME, online BOOLEAN, host TEXT, PRIMARY KEY(value_id));"
     try:
         cursor.execute(sql_string)
         db.commit()
+        print("VALS:", report)
+        tid = report['timestamp']
+        date_str = tid.strftime("%Y-%m-%d %H:%M:%S")
+        print("Time:", tid)
         for s in report['server_online']:
-            values = (report['source'], report['timestamp'], report['server_online'][s], s)
-            cursor.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
+            values = (report['source'], date_str, report['server_online'][s], s)
+            print("VALUES:", values)
+            #cursor.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
+            #cursor.execute("INSERT INTO status VALUES (NULL, {0}, {1}, {2}, {3});".format(values))
+            sql_string = "INSERT INTO status VALUES (NULL, {0}, {1}, {2}, {3});".format(values)
+            #sql_string = "INSERT INTO status VALUES (NULL, %, %, %, %);".format(values)
+            print("\nSQL LINE:", sql_string)
+            cursor.execute(sql_string)
         db.commit()
         db.close()
 
