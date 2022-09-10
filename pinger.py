@@ -41,6 +41,7 @@ def start():
         # print dict
         print("\n\nREPORT DICT:\n", report)
         print("\n\nEnd")
+    print("\nCode successfully executed!")
 
 
 def get_server_list():
@@ -57,7 +58,6 @@ def get_server_list():
 
 
 def get_server_status(report):
-    print("STATUS")
     status = {}
     for s in report['server_list']:
         if ping(s) == 0:
@@ -88,10 +88,11 @@ def ping(host):
 def save_values(report):
     # Local sqlite3 save
     save_local(report)
-    print("\nLocal save ok\n\nREPORT DICT:\n", report)
+    print("\nLocal save ok\n")
+    print("get missing values pls")
 
     # Remote sql save (if online)
-    if report['server_online'][config.domain]:
+    if ping(config.domain):
         # First add missing values to remote database
         get_missing_values()
         save_remote(report)
@@ -121,6 +122,7 @@ def save_local(report):
 
     conn_sqlite.commit()
     conn_sqlite.close()
+    print("\nsaved", len(report['server_online']), "values")
 
 
 def save_missing_values(report):
@@ -132,14 +134,14 @@ def save_missing_values(report):
 
     for s in report['server_online']:
         values = (report['source'], report['timestamp'], report['server_online'][s], s)
-        c3.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
+        c3.execute("INSERT INTO missing_values VALUES (NULL, ?, ?, ?, ?);", values)
 
     conn_sqlite.commit()
     conn_sqlite.close()
+    print("\nsaved", len(report['server_online']), "values")
 
 
 def get_missing_values():
-    print("get missing values pls")
     conn_sqlite = sqlite3.connect('database.db')
     c3 = conn_sqlite.cursor()
     try:
@@ -147,7 +149,7 @@ def get_missing_values():
         data = c3.fetchall()
         conn_sqlite.commit()
     except sqlite3.OperationalError:
-        print("No missing values (no database named 'missing_values')")
+        print("\nNo missing values (no local table named 'missing_values')")
         data = None
 
     if data:
@@ -173,22 +175,34 @@ def save_remote(report):
     cursor = db.cursor()
 
     # Check below! Error 1064: You have an error in your SQL syntax
+    # mariadb might not take 'IF NOT EXISTS'...
     sql_string = "CREATE TABLE IF NOT EXISTS status (value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp " \
                  "DATETIME, online BOOLEAN, host TEXT, PRIMARY KEY(value_id));"
     try:
         cursor.execute(sql_string)
         db.commit()
+        """
+        strftime - Datetime to String
+        strptime - String to Datetime
+        """
 
-        format_tid = "%d-%m-%y %H:%M:%S.%f"
-        tid = datetime.strftime(report['timestamp'], format_tid)
+        #print("DATE:", report['timestamp'], "TYPE:", type(report['timestamp']))
+        # Programming with time is a nightmare
+        if isinstance(report['timestamp'], datetime):
+            tid = report['timestamp']
+        else:
+            format_tid = "%Y-%m-%d %H:%M:%S.%f"
+            tid = datetime.strptime(report['timestamp'], format_tid)
+
+        #print("DATE:", report['timestamp'], "TYPE:", type(report['timestamp']))
 
         for s in report['server_online']:
             values = None, report['source'], tid, report['server_online'][s], s
             sql_string = "INSERT INTO status VALUES (%s, %s, %s, %s, %s);"
-            print("\nSQL LINE:", sql_string, "\nVALUES:", values)
             cursor.execute(sql_string, values)
         db.commit()
         db.close()
+        print("\nsaved", len(report['server_online']), "values")
 
     except pymysql.Error as e:
         db.rollback()
