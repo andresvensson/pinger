@@ -59,10 +59,12 @@ separate file, import file in main code
 MariaDB:
 
 CREATE TABLE status IF NOT EXISTS (value_id INT NOT NULL AUTO_INCREMENT,
-source TEXT,
-timestamp DATETIME,
-online BOOLEAN,
-host TEXT,
+source TEXT NOT NULL,
+timestamp DATETIME NOT NULL,
+online BOOLEAN NOT NULL,
+host TEXT NOT NULL,
 PRIMARY KEY(value_id));
 
-CREATE TABLE status IF NOT EXISTS (value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp DATETIME, online BOOLEAN, host TEXT, PRIMARY KEY(value_id));
+CREATE TABLE status IF NOT EXISTS (value_id INT NOT NULL AUTO_INCREMENT, source TEXT NOT NULL, timestamp DATETIME NOT NULL, online BOOLEAN NOT NULL, host TEXT NOT NULL, PRIMARY KEY(value_id));
+CREATE TABLE status (value_id INT NOT NULL AUTO_INCREMENT, source TEXT NOT NULL, timestamp DATETIME NOT NULL, online BOOLEAN NOT NULL, host TEXT NOT NULL, PRIMARY KEY(value_id));
+

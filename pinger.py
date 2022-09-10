@@ -159,7 +159,7 @@ def get_missing_values():
 
         report['server_online'] = status
         save_remote(report)
-        print("save missing values")
+        print("saved missing values")
 
         # clean up missing table
         c3.execute("DROP TABLE IF EXISTS missing_values;")
@@ -178,19 +178,15 @@ def save_remote(report):
     try:
         cursor.execute(sql_string)
         db.commit()
-        print("VALS:", report)
-        tid = report['timestamp']
-        date_str = tid.strftime("%Y-%m-%d %H:%M:%S")
-        print("Time:", tid)
+
+        format_tid = "%d-%m-%y %H:%M:%S.%f"
+        tid = datetime.strftime(report['timestamp'], format_tid)
+
         for s in report['server_online']:
-            values = (report['source'], date_str, report['server_online'][s], s)
-            print("VALUES:", values)
-            #cursor.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
-            #cursor.execute("INSERT INTO status VALUES (NULL, {0}, {1}, {2}, {3});".format(values))
-            sql_string = "INSERT INTO status VALUES (NULL, {0}, {1}, {2}, {3});".format(values)
-            #sql_string = "INSERT INTO status VALUES (NULL, %, %, %, %);".format(values)
-            print("\nSQL LINE:", sql_string)
-            cursor.execute(sql_string)
+            values = None, report['source'], tid, report['server_online'][s], s
+            sql_string = "INSERT INTO status VALUES (%s, %s, %s, %s, %s);"
+            print("\nSQL LINE:", sql_string, "\nVALUES:", values)
+            cursor.execute(sql_string, values)
         db.commit()
         db.close()
 
