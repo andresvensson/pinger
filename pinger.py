@@ -31,7 +31,7 @@ def start():
     time.sleep(DELAY)
 
     # read servers list from separate text file, timestamp
-    if os.path.isfile('config.py'):
+    if os.path.isfile(config.install_dir + 'config.py'):
         report = {'source': config.source, 'server_list': get_server_list(), 'timestamp': datetime.now()}
     else:
         msg("ERROR: missing file 'config.py' in root directory. Please create file")
@@ -55,7 +55,7 @@ def start():
 def get_server_list():
 
     if os.path.isfile('server_watchlist.txt'):
-        with open('server_watchlist.txt') as f:
+        with open(config.install_dir + 'server_watchlist.txt') as f:
             content = f.read().splitlines()
         return content
     else:
