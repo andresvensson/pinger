@@ -2,42 +2,26 @@ DATABASE STRUCTURE
 safety when remote fails
 
 
+TODO
+Create remote database and user     -CHECK
+test code                           -CHECK
+code cleanup (remove prints)
+add logger? No need                 -CHECK
+adjust Github readme
+deploy
+done?
+:::::::::
+
+
 push local
-push remote	-fail
-	save in a local missing table
+push remote (+ local missing data)
+    if remote fail:
+	    save in a local missing table
+
+??
+Does it matter from where pinger goes when saving to remote database?
 
 
-code structure:
-pinger.py, (import databaser or print)
-databaser.py, (import pwd)
-
-
-THIS!
-idéa:
-1 save local
-2 check remote connectivity (done earlier in code)
-	offline = save in local db (missing_values)
-	online = check missing values?
-		clear = save to remote - end
-		missing = save missing + recent
-			if dbs in sync
-				delete missing flaged (local)
-3 fail events? write logfile local
-
-
-
-
-NOT THIS	
-alt
-1 save local
-2 once a day
-	check remote data
-		fill up if missing
-
-(compare using local timestamp)
-
-+
-doable
 
 -
 timedelay for website
@@ -48,4 +32,15 @@ domain, username, password = save in separate document, gitignore
 
 separate file, import file in main code
 
+MariaDB:
+
+CREATE TABLE status IF NOT EXISTS (value_id INT NOT NULL AUTO_INCREMENT,
+source TEXT NOT NULL,
+timestamp DATETIME NOT NULL,
+online BOOLEAN NOT NULL,
+host TEXT NOT NULL,
+PRIMARY KEY(value_id));
+
+# create table, done in code
+CREATE TABLE IF NOT EXISTS status (value_id INT NOT NULL AUTO_INCREMENT, source TEXT NOT NULL, timestamp DATETIME NOT NULL, online BOOLEAN NOT NULL, host TEXT NOT NULL, PRIMARY KEY(value_id));
 

@@ -3,27 +3,37 @@ import sqlite3
 import sys
 import platform
 import subprocess
+import time
+
 import config
-import _sqlite3
 import pymysql
+from datetime import datetime
 
 
 # Pinger script as of 2022-08-27
 #
 # Notes
 # db structure: One database, one table, one row for every server
-#
+# data is saved as report at one timestamp containing all servers checked
 
 # CONFIG
 save_to_database = True
 
-conn_sqlite = sqlite3.connect('database.db')
-c3 = conn_sqlite.cursor()
-
 
 def start():
-    # read servers list from separate text file
-    report = {'server_list': get_server_list()}
+    # delay execute to free cpu cycles due to other codes running at same time.
+    time.sleep(5)
+
+    # read servers list from separate text file, timestamp
+    if os.path.isfile('config.py'):
+        report = {'source': config.source, 'server_list': get_server_list(), 'timestamp': datetime.now()}
+    else:
+        print("ERROR: missing file 'config.py' in root directory")
+        fp = open('config.py', 'w')
+        fp.write('username = "db_user"\npassword = "db_password"\ndomain = "example.com"\nsource = "client@network')
+        fp.close()
+        print("template has been created. Please add your configurations...")
+        sys.exit()
 
     # ping servers
     report['server_online'] = get_server_status(report)
@@ -32,24 +42,28 @@ def start():
     if save_to_database:
         save_values(report)
     else:
-        print("\nPrint result:\n", report)
+        # print dict
+        print("\n\nREPORT DICT:\n", report)
+        print("\n\nEnd")
+    # print("\nCode successfully executed!")
 
 
 def get_server_list():
-    print("read server list")
 
     if os.path.isfile('server_watchlist.txt'):
         with open('server_watchlist.txt') as f:
             content = f.read().splitlines()
         return content
     else:
-        print("ERROR: missing file 'server_watchlist.txt' in root directory. Please create the file")
-        # add a helper? Maybe later
+        print("ERROR: missing file 'server_watchlist.txt' in root directory.")
+        fp = open('server_watchlist.txt', 'w')
+        fp.write('localhost\ngoogle.com\n')
+        fp.close()
+        print("created server_watchlist.txt please fill in server names to your watchlist")
         sys.exit()
 
 
 def get_server_status(report):
-    print("STATUS")
     status = {}
     for s in report['server_list']:
         if ping(s) == 0:
@@ -78,9 +92,17 @@ def ping(host):
 
 
 def save_values(report):
-    # local sqlite3 save
+    # Local sqlite3 save
     save_local(report)
-    print("End")
+
+    # Remote sql save (if online)
+    if ping(config.domain):
+        # First add missing values to remote database
+        get_missing_values()
+        save_remote(report)
+    else:
+        print("FAILED: remote host offline")
+        save_missing_values(report)
 
 
 def save_local(report):
@@ -91,19 +113,102 @@ def save_local(report):
     .tables
     select * from status;
     """
-    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, timestamp CURRENT_TIMESTAMP,
-     host TEXT, online INTEGER);""")
+    conn_sqlite = sqlite3.connect('database.db')
+    c3 = conn_sqlite.cursor()
+    c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, source TEXT, timestamp 
+    CURRENT_TIMESTAMP, online INTEGER, host TEXT);""")
     conn_sqlite.commit()
 
     for s in report['server_online']:
-        values = (s, report['server_online'][s])
-        # id ? NULL, timestamp = insert date??, host = code, online = code
-        c3.execute("INSERT INTO status VALUES (NULL, NULL, ?, ?);", values)
-        conn_sqlite.commit()
+        values = (report['source'], report['timestamp'], report['server_online'][s], s)
+        c3.execute("INSERT INTO status VALUES (NULL, ?, ?, ?, ?);", values)
 
-    # conn_sqlite.commit()
+    conn_sqlite.commit()
     conn_sqlite.close()
-    print("END OF CODE")
+
+
+def save_missing_values(report):
+    conn_sqlite = sqlite3.connect('database.db')
+    c3 = conn_sqlite.cursor()
+    c3.execute("""CREATE TABLE IF NOT EXISTS missing_values (id INTEGER NOT NULL PRIMARY KEY, source TEXT, timestamp 
+    CURRENT_TIMESTAMP, online INTEGER, host TEXT);""")
+    conn_sqlite.commit()
+
+    for s in report['server_online']:
+        values = (report['source'], report['timestamp'], report['server_online'][s], s)
+        c3.execute("INSERT INTO missing_values VALUES (NULL, ?, ?, ?, ?);", values)
+
+    conn_sqlite.commit()
+    conn_sqlite.close()
+
+
+def get_missing_values():
+    conn_sqlite = sqlite3.connect('database.db')
+    c3 = conn_sqlite.cursor()
+    try:
+        c3.execute("SELECT * FROM missing_values;")
+        data = c3.fetchall()
+        conn_sqlite.commit()
+    except sqlite3.OperationalError:
+        # print("\nNo missing values (no local table named 'missing_values')")
+        data = None
+
+    if data:
+        # print("found", len(data), "missing values\n")
+        report = {'source': config.source, 'timestamp': data[0][2]}
+        status = {}
+        for row in data:
+            # gather all ping results from the same timestamp (a report)
+            if report['timestamp'] == row[2]:
+                status[str(row[4])] = row[3]
+                report['server_online'] = status
+            else:
+                # new time series coming, save report first
+                save_remote(report)
+                report['timestamp'] = row[2]
+                status[str(row[4])] = row[3]
+                report['server_online'] = status
+        # save last report
+        save_remote(report)
+
+        # clean up missing table
+        c3.execute("DROP TABLE IF EXISTS missing_values;")
+        conn_sqlite.close()
+    else:
+        return
+
+
+def save_remote(report):
+    db = pymysql.connect(host=config.domain, user=config.username, password=config.password, db="ping")
+    cursor = db.cursor()
+
+    sql_string = "CREATE TABLE IF NOT EXISTS status (value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp " \
+                 "DATETIME, online BOOLEAN, host TEXT, PRIMARY KEY(value_id));"
+    try:
+        cursor.execute(sql_string)
+        db.commit()
+        """
+        strftime - Datetime to String
+        strptime - String to Datetime
+        """
+
+        # Programming with time is a nightmare
+        if isinstance(report['timestamp'], datetime):
+            tid = report['timestamp']
+        else:
+            format_tid = "%Y-%m-%d %H:%M:%S.%f"
+            tid = datetime.strptime(report['timestamp'], format_tid)
+
+        for s in report['server_online']:
+            values = None, report['source'], tid, report['server_online'][s], s
+            sql_string = "INSERT INTO status VALUES (%s, %s, %s, %s, %s);"
+            cursor.execute(sql_string, values)
+        db.commit()
+        db.close()
+
+    except pymysql.Error as e:
+        db.rollback()
+        print("Error %d: %s" % (e.args[0], e.args[1]))
 
 
 if __name__ == "__main__":
