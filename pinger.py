@@ -34,11 +34,7 @@ def start():
     if os.path.isfile('config.py'):
         report = {'source': config.source, 'server_list': get_server_list(), 'timestamp': datetime.now()}
     else:
-        print("ERROR: missing file 'config.py' in root directory")
-        fp = open('config.py', 'w')
-        fp.write('username = "db_user"\npassword = "db_password"\ndomain = "example.com"\nsource = "client@network')
-        fp.close()
-        print("template has been created. Please add your configurations...")
+        msg("ERROR: missing file 'config.py' in root directory. Please create file")
         sys.exit()
 
     # ping servers
@@ -63,11 +59,7 @@ def get_server_list():
             content = f.read().splitlines()
         return content
     else:
-        print("ERROR: missing file 'server_watchlist.txt' in root directory.")
-        fp = open('server_watchlist.txt', 'w')
-        fp.write('localhost\ngoogle.com\n')
-        fp.close()
-        print("created server_watchlist.txt please fill in server names to your watchlist")
+        msg("ERROR: missing file 'server_watchlist.txt' in root directory. Please create file")
         sys.exit()
 
 
@@ -233,7 +225,7 @@ def msg(x):
         print(text)
     if log_file:
         ts_day = ts.strftime('%Y-%m-%d')
-        filename = "log_" + ts_day + ".txt"
+        filename = config.log_dir + "log_" + ts_day + ".txt"
         fp = open(filename, 'a')
         fp.write(text)
         fp.close()
