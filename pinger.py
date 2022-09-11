@@ -54,7 +54,7 @@ def start():
 
 def get_server_list():
 
-    if os.path.isfile('server_watchlist.txt'):
+    if os.path.isfile(config.install_dir + 'server_watchlist.txt'):
         with open(config.install_dir + 'server_watchlist.txt') as f:
             content = f.read().splitlines()
         return content
