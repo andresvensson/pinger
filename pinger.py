@@ -18,11 +18,17 @@ from datetime import datetime
 
 # CONFIG
 save_to_database = True
+# seconds delay execute (free cpu cycles due to other codes running at same time)
+DELAY = 0
+# output information in terminal
+print_information = False
+# create log file
+log_file = True
 
 
 def start():
     # delay execute to free cpu cycles due to other codes running at same time.
-    time.sleep(5)
+    time.sleep(DELAY)
 
     # read servers list from separate text file, timestamp
     if os.path.isfile('config.py'):
@@ -37,6 +43,7 @@ def start():
 
     # ping servers
     report['server_online'] = get_server_status(report)
+    msg("checked " + str(len(report['server_online'])) + " servers")
 
     # save to local database and push to remote database
     if save_to_database:
@@ -45,6 +52,7 @@ def start():
         # print dict
         print("\n\nREPORT DICT:\n", report)
         print("\n\nEnd")
+    msg("Code successfully executed!\n")
     # print("\nCode successfully executed!")
 
 
@@ -96,12 +104,14 @@ def save_values(report):
     save_local(report)
 
     # Remote sql save (if online)
+    msg("try connection to remote database")
     if ping(config.domain):
+        msg("remote database online, check if theres missing values")
         # First add missing values to remote database
         get_missing_values()
         save_remote(report)
     else:
-        print("FAILED: remote host offline")
+        msg("FAILED: remote host offline")
         save_missing_values(report)
 
 
@@ -125,6 +135,7 @@ def save_local(report):
 
     conn_sqlite.commit()
     conn_sqlite.close()
+    msg("saved " + str(len(report['server_online'])) + " values, local")
 
 
 def save_missing_values(report):
@@ -138,6 +149,7 @@ def save_missing_values(report):
         values = (report['source'], report['timestamp'], report['server_online'][s], s)
         c3.execute("INSERT INTO missing_values VALUES (NULL, ?, ?, ?, ?);", values)
 
+    msg("saved " + str(len(report['server_online'])) + " missing values, local")
     conn_sqlite.commit()
     conn_sqlite.close()
 
@@ -150,15 +162,15 @@ def get_missing_values():
         data = c3.fetchall()
         conn_sqlite.commit()
     except sqlite3.OperationalError:
-        # print("\nNo missing values (no local table named 'missing_values')")
+        msg("No missing values (no local table named 'missing_values')")
         data = None
 
     if data:
-        # print("found", len(data), "missing values\n")
+        msg("found" + str(len(data)) + "missing values")
         report = {'source': config.source, 'timestamp': data[0][2]}
         status = {}
         for row in data:
-            # gather all ping results from the same timestamp (a report)
+            # gather all ping results from the same timestamp (one report)
             if report['timestamp'] == row[2]:
                 status[str(row[4])] = row[3]
                 report['server_online'] = status
@@ -174,6 +186,7 @@ def get_missing_values():
         # clean up missing table
         c3.execute("DROP TABLE IF EXISTS missing_values;")
         conn_sqlite.close()
+        msg("removed local missing_values table")
     else:
         return
 
@@ -205,10 +218,27 @@ def save_remote(report):
             cursor.execute(sql_string, values)
         db.commit()
         db.close()
+        msg("saved " + str(len(report['server_online'])) + " values, remote")
 
     except pymysql.Error as e:
         db.rollback()
+        msg("Error saving remote")
         print("Error %d: %s" % (e.args[0], e.args[1]))
+
+
+def msg(x):
+    ts = datetime.now()
+    text = "[" + str(ts) + "] " + str(x) + "\n"
+    if print_information:
+        print(text)
+    if log_file:
+        ts_day = ts.strftime('%Y-%m-%d')
+        filename = "log_" + ts_day + ".txt"
+        fp = open(filename, 'a')
+        fp.write(text)
+        fp.close()
+    else:
+        pass
 
 
 if __name__ == "__main__":
