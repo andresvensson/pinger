@@ -7,9 +7,13 @@ INSTALL
 1, clone repo
 
 2, make sure to set your configuration. Code will create templates if files not exists:
+
 /config.py
+
   your local unit and remote database user, pass, hostname
+
 /server_watchlist.txt
+
   example.com
   example1.com
   
