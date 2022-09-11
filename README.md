@@ -4,7 +4,7 @@ PINGER
 
 REQUIREMENTS
 
-<sub>python librarys, SQL database</sub>
+<sub>python libraries, SQL database</sub>
 
 
 INSTALL
