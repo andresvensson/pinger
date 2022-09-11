@@ -89,16 +89,17 @@ def save_values(report):
     # Local sqlite3 save
     save_local(report)
     print("\nLocal save ok\n")
-    print("get missing values pls")
+    print("check connectivity to remote database")
 
     # Remote sql save (if online)
     if ping(config.domain):
         # First add missing values to remote database
+        print("get missing values pls")
         get_missing_values()
         save_remote(report)
         print("\nRemote save ok")
     else:
-        print("remote host offline")
+        print("FAILED remote host offline")
         save_missing_values(report)
 
 
@@ -122,7 +123,7 @@ def save_local(report):
 
     conn_sqlite.commit()
     conn_sqlite.close()
-    print("\nsaved", len(report['server_online']), "values")
+    print("\nsaved", len(report['server_online']), "values, local")
 
 
 def save_missing_values(report):
@@ -138,7 +139,7 @@ def save_missing_values(report):
 
     conn_sqlite.commit()
     conn_sqlite.close()
-    print("\nsaved", len(report['server_online']), "values")
+    print("\nsaved", len(report['server_online']), "'missing' values, local")
 
 
 def get_missing_values():
@@ -153,19 +154,27 @@ def get_missing_values():
         data = None
 
     if data:
-        report = {'source': config.source}
+        print("found", len(data), "missing values\n")
+        report = {'source': config.source, 'timestamp': data[0][2]}
         status = {}
         for row in data:
-            report['timestamp'] = row[2]
-            status[str(row[4])] = row[3]
-
-        report['server_online'] = status
+            # gather all ping results from the same timestamp (a report)
+            if report['timestamp'] == row[2]:
+                status[str(row[4])] = row[3]
+                report['server_online'] = status
+            else:
+                # new time series coming, save report first
+                save_remote(report)
+                report['timestamp'] = row[2]
+                status[str(row[4])] = row[3]
+                report['server_online'] = status
+        # save last report
         save_remote(report)
-        print("saved missing values")
 
         # clean up missing table
         c3.execute("DROP TABLE IF EXISTS missing_values;")
         conn_sqlite.close()
+        print("deleted local 'missing_values' table")
     else:
         return
 
@@ -202,7 +211,7 @@ def save_remote(report):
             cursor.execute(sql_string, values)
         db.commit()
         db.close()
-        print("\nsaved", len(report['server_online']), "values")
+        print("\nsaved", len(report['server_online']), "values, remote")
 
     except pymysql.Error as e:
         db.rollback()
