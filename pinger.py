@@ -6,7 +6,6 @@ import subprocess
 import time
 
 import config
-import _sqlite3
 import pymysql
 from datetime import datetime
 
@@ -15,7 +14,7 @@ from datetime import datetime
 #
 # Notes
 # db structure: One database, one table, one row for every server
-#
+# data is saved as report at one timestamp containing all servers checked
 
 # CONFIG
 save_to_database = True
@@ -23,12 +22,17 @@ save_to_database = True
 
 def start():
     # delay execute to free cpu cycles due to other codes running at same time.
-    #time.sleep(5)
+    time.sleep(5)
+
     # read servers list from separate text file, timestamp
     if os.path.isfile('config.py'):
         report = {'source': config.source, 'server_list': get_server_list(), 'timestamp': datetime.now()}
     else:
-        print("ERROR: missing file 'config.py' in root directory. Please create the file")
+        print("ERROR: missing file 'config.py' in root directory")
+        fp = open('config.py', 'w')
+        fp.write('username = "db_user"\npassword = "db_password"\ndomain = "example.com"\nsource = "client@network')
+        fp.close()
+        print("template has been created. Please add your configurations...")
         sys.exit()
 
     # ping servers
@@ -41,19 +45,21 @@ def start():
         # print dict
         print("\n\nREPORT DICT:\n", report)
         print("\n\nEnd")
-    print("\nCode successfully executed!")
+    # print("\nCode successfully executed!")
 
 
 def get_server_list():
-    print("read server list")
 
     if os.path.isfile('server_watchlist.txt'):
         with open('server_watchlist.txt') as f:
             content = f.read().splitlines()
         return content
     else:
-        print("ERROR: missing file 'server_watchlist.txt' in root directory. Please create the file")
-        # add a helper? Maybe later
+        print("ERROR: missing file 'server_watchlist.txt' in root directory.")
+        fp = open('server_watchlist.txt', 'w')
+        fp.write('localhost\ngoogle.com\n')
+        fp.close()
+        print("created server_watchlist.txt please fill in server names to your watchlist")
         sys.exit()
 
 
@@ -88,18 +94,14 @@ def ping(host):
 def save_values(report):
     # Local sqlite3 save
     save_local(report)
-    print("\nLocal save ok\n")
-    print("check connectivity to remote database")
 
     # Remote sql save (if online)
     if ping(config.domain):
         # First add missing values to remote database
-        print("get missing values pls")
         get_missing_values()
         save_remote(report)
-        print("\nRemote save ok")
     else:
-        print("FAILED remote host offline")
+        print("FAILED: remote host offline")
         save_missing_values(report)
 
 
@@ -123,7 +125,6 @@ def save_local(report):
 
     conn_sqlite.commit()
     conn_sqlite.close()
-    print("\nsaved", len(report['server_online']), "values, local")
 
 
 def save_missing_values(report):
@@ -139,7 +140,6 @@ def save_missing_values(report):
 
     conn_sqlite.commit()
     conn_sqlite.close()
-    print("\nsaved", len(report['server_online']), "'missing' values, local")
 
 
 def get_missing_values():
@@ -150,11 +150,11 @@ def get_missing_values():
         data = c3.fetchall()
         conn_sqlite.commit()
     except sqlite3.OperationalError:
-        print("\nNo missing values (no local table named 'missing_values')")
+        # print("\nNo missing values (no local table named 'missing_values')")
         data = None
 
     if data:
-        print("found", len(data), "missing values\n")
+        # print("found", len(data), "missing values\n")
         report = {'source': config.source, 'timestamp': data[0][2]}
         status = {}
         for row in data:
@@ -174,7 +174,6 @@ def get_missing_values():
         # clean up missing table
         c3.execute("DROP TABLE IF EXISTS missing_values;")
         conn_sqlite.close()
-        print("deleted local 'missing_values' table")
     else:
         return
 
@@ -183,8 +182,6 @@ def save_remote(report):
     db = pymysql.connect(host=config.domain, user=config.username, password=config.password, db="ping")
     cursor = db.cursor()
 
-    # Check below! Error 1064: You have an error in your SQL syntax
-    # mariadb might not take 'IF NOT EXISTS'...
     sql_string = "CREATE TABLE IF NOT EXISTS status (value_id INT NOT NULL AUTO_INCREMENT, source TEXT, timestamp " \
                  "DATETIME, online BOOLEAN, host TEXT, PRIMARY KEY(value_id));"
     try:
@@ -195,7 +192,6 @@ def save_remote(report):
         strptime - String to Datetime
         """
 
-        #print("DATE:", report['timestamp'], "TYPE:", type(report['timestamp']))
         # Programming with time is a nightmare
         if isinstance(report['timestamp'], datetime):
             tid = report['timestamp']
@@ -203,15 +199,12 @@ def save_remote(report):
             format_tid = "%Y-%m-%d %H:%M:%S.%f"
             tid = datetime.strptime(report['timestamp'], format_tid)
 
-        #print("DATE:", report['timestamp'], "TYPE:", type(report['timestamp']))
-
         for s in report['server_online']:
             values = None, report['source'], tid, report['server_online'][s], s
             sql_string = "INSERT INTO status VALUES (%s, %s, %s, %s, %s);"
             cursor.execute(sql_string, values)
         db.commit()
         db.close()
-        print("\nsaved", len(report['server_online']), "values, remote")
 
     except pymysql.Error as e:
         db.rollback()
