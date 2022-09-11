@@ -21,7 +21,7 @@ save_to_database = True
 # seconds delay execute (free cpu cycles due to other codes running at same time)
 DELAY = 0
 # output information in terminal
-print_information = True
+print_information = False
 # create log file
 log_file = True
 
@@ -52,7 +52,7 @@ def start():
         # print dict
         print("\n\nREPORT DICT:\n", report)
         print("\n\nEnd")
-    msg("Code successfully executed!")
+    msg("Code successfully executed!\n")
     # print("\nCode successfully executed!")
 
 
@@ -104,7 +104,9 @@ def save_values(report):
     save_local(report)
 
     # Remote sql save (if online)
+    msg("try connection to remote database")
     if ping(config.domain):
+        msg("remote database online, check if theres missing values")
         # First add missing values to remote database
         get_missing_values()
         save_remote(report)
@@ -147,6 +149,7 @@ def save_missing_values(report):
         values = (report['source'], report['timestamp'], report['server_online'][s], s)
         c3.execute("INSERT INTO missing_values VALUES (NULL, ?, ?, ?, ?);", values)
 
+    msg("saved " + str(len(report['server_online'])) + " missing values, local")
     conn_sqlite.commit()
     conn_sqlite.close()
 
@@ -159,7 +162,7 @@ def get_missing_values():
         data = c3.fetchall()
         conn_sqlite.commit()
     except sqlite3.OperationalError:
-        # print("\nNo missing values (no local table named 'missing_values')")
+        msg("No missing values (no local table named 'missing_values')")
         data = None
 
     if data:
