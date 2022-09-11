@@ -21,9 +21,9 @@ INSTALL
   <sub>(example.com
 		example1.com)</sub>
   
-3, add code executable to crontab</sub>
-
-
+<sub>3, add code executable to crontab</sub>
+	
+		
 FUNCTIONS
 
 <sub>Ping clients
@@ -31,6 +31,7 @@ log response (online/offline)
 save results in local DB and remote DB</sub>
 
 
+	
 TODO
 
 <sub>present in webpage with graph? and stats?</sub>
