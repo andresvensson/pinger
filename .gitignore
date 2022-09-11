@@ -5,3 +5,4 @@ __pycache__/
 server_watchlist.txt
 config.py
 database.db
+log_*
