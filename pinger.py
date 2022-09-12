@@ -115,7 +115,7 @@ def save_local(report):
     .tables
     select * from status;
     """
-    conn_sqlite = sqlite3.connect('database.db')
+    conn_sqlite = sqlite3.connect(config.install_dir + 'database.db')
     c3 = conn_sqlite.cursor()
     c3.execute("""CREATE TABLE IF NOT EXISTS status (id INTEGER NOT NULL PRIMARY KEY, source TEXT, timestamp 
     CURRENT_TIMESTAMP, online INTEGER, host TEXT);""")
@@ -131,7 +131,7 @@ def save_local(report):
 
 
 def save_missing_values(report):
-    conn_sqlite = sqlite3.connect('database.db')
+    conn_sqlite = sqlite3.connect(config.install_dir + 'database.db')
     c3 = conn_sqlite.cursor()
     c3.execute("""CREATE TABLE IF NOT EXISTS missing_values (id INTEGER NOT NULL PRIMARY KEY, source TEXT, timestamp 
     CURRENT_TIMESTAMP, online INTEGER, host TEXT);""")
