@@ -23,7 +23,7 @@ DELAY = 0
 # output information in terminal
 print_information = False
 # create log file
-log_file = True
+log_file = False
 
 
 def start():
@@ -34,12 +34,12 @@ def start():
     if os.path.isfile(config.install_dir + 'config.py'):
         report = {'source': config.source, 'server_list': get_server_list(), 'timestamp': datetime.now()}
     else:
-        msg("ERROR: missing file 'config.py' in root directory. Please create file")
+        msg("ERROR: missing file 'config.py' in root directory. Please create file", 1)
         sys.exit()
 
     # ping servers
     report['server_online'] = get_server_status(report)
-    msg("checked " + str(len(report['server_online'])) + " servers")
+    msg("checked " + str(len(report['server_online'])) + " servers", 0)
 
     # save to local database and push to remote database
     if save_to_database:
@@ -47,8 +47,8 @@ def start():
     else:
         # print dict
         print("\n\nREPORT DICT:\n", report)
-        print("\n\nEnd")
-    msg("Code successfully executed!\n")
+        print("\nEnd")
+    msg("Code successfully executed!\n", 0)
     # print("\nCode successfully executed!")
 
 
@@ -59,7 +59,7 @@ def get_server_list():
             content = f.read().splitlines()
         return content
     else:
-        msg("ERROR: missing file 'server_watchlist.txt' in root directory. Please create file")
+        msg("ERROR: missing file 'server_watchlist.txt' in root directory. Please create file", 1)
         sys.exit()
 
 
@@ -96,14 +96,14 @@ def save_values(report):
     save_local(report)
 
     # Remote sql save (if online)
-    msg("try connection to remote database")
+    msg("try connection to remote database", 0)
     if ping(config.domain):
-        msg("remote database online, check if theres missing values")
+        msg("remote database online, check if theres missing values", 0)
         # First add missing values to remote database
         get_missing_values()
         save_remote(report)
     else:
-        msg("FAILED: remote host offline")
+        msg("FAILED: remote host offline", 1)
         save_missing_values(report)
 
 
@@ -127,7 +127,7 @@ def save_local(report):
 
     conn_sqlite.commit()
     conn_sqlite.close()
-    msg("saved " + str(len(report['server_online'])) + " values, local")
+    msg("saved " + str(len(report['server_online'])) + " values, local", 0)
 
 
 def save_missing_values(report):
@@ -141,7 +141,7 @@ def save_missing_values(report):
         values = (report['source'], report['timestamp'], report['server_online'][s], s)
         c3.execute("INSERT INTO missing_values VALUES (NULL, ?, ?, ?, ?);", values)
 
-    msg("saved " + str(len(report['server_online'])) + " missing values, local")
+    msg("saved " + str(len(report['server_online'])) + " missing values, local", 0)
     conn_sqlite.commit()
     conn_sqlite.close()
 
@@ -154,11 +154,11 @@ def get_missing_values():
         data = c3.fetchall()
         conn_sqlite.commit()
     except sqlite3.OperationalError:
-        msg("No missing values (no local table named 'missing_values')")
+        msg("No missing values (no local table named 'missing_values')", 0)
         data = None
 
     if data:
-        msg("found" + str(len(data)) + "missing values")
+        msg("found" + str(len(data)) + "missing values", 0)
         report = {'source': config.source, 'timestamp': data[0][2]}
         status = {}
         for row in data:
@@ -178,7 +178,7 @@ def get_missing_values():
         # clean up missing table
         c3.execute("DROP TABLE IF EXISTS missing_values;")
         conn_sqlite.close()
-        msg("removed local missing_values table")
+        msg("removed local missing_values table", 0)
     else:
         return
 
@@ -210,15 +210,15 @@ def save_remote(report):
             cursor.execute(sql_string, values)
         db.commit()
         db.close()
-        msg("saved " + str(len(report['server_online'])) + " values, remote")
+        msg("saved " + str(len(report['server_online'])) + " values, remote", 0)
 
     except pymysql.Error as e:
         db.rollback()
-        msg("Error saving remote")
+        msg("Error saving remote", 1)
         print("Error %d: %s" % (e.args[0], e.args[1]))
 
 
-def msg(x):
+def msg(x, y):
     ts = datetime.now()
     text = "[" + str(ts) + "] " + str(x) + "\n"
     if print_information:
@@ -229,6 +229,9 @@ def msg(x):
         fp = open(filename, 'a')
         fp.write(text)
         fp.close()
+    # severe errors will be printed
+    if y and not print_information and not log_file:
+        print(text)
     else:
         pass
 
